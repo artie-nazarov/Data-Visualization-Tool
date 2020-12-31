@@ -23,10 +23,20 @@ function App() {
     setEq(eq => (equipmentItems, e));
   }
 
+  const [equipmentLabel, setEquipmentLabel] = useState([]);
+  function updateEquipmentLabel(e) {
+    setEquipmentLabel(eq => (equipmentLabel, e));
+  }
+
   // Part number state update
   const [partItems, setPart] = useState([]);
   function updatePartNumberState(e) {
     setPart(eq => (partItems, e));
+  }
+
+  const [partLabels, setPartLabels] = useState([]);
+  function updatePartLabels(e) {
+    setPartLabels(eq => (partLabels, e));
   }
 
     // Code state update
@@ -35,12 +45,27 @@ function App() {
       setCode(eq => (codeItems, e));
     }
 
+    const [codeLabels, setCodeLabels] = useState([]);
+    function updateCodeLabels(e) {
+      setCodeLabels(eq => (codeLabels, e));
+    }
+
     // Graph data
     var graphLabel = [];
-    var xAxisData = [];
-    var yAxisData = [];
     var pdmGraphCoordinates = [];
+
+    // Graph states
+    const [graphLabels, setLabels] = useState([]);
+    function updateLabelState(e) {
+      setLabels(eq => (graphLabels, e));
+    }
+
+    const [graphCoordinatesTest, setCoordinates] = useState([]);
+    function updateCoordinateState(e) {
+      setCoordinates(eq => (graphCoordinatesTest, e));
+    }
     
+    // Excel File properties
      var file = {};
      var data = [];
      var cols = [];
@@ -57,8 +82,8 @@ function App() {
     let equipmentGrid = null;
     const equipmentRowSelected = () => { 
       if(equipmentGrid){
-        console.log(codeItems);
         const eqLabel = equipmentGrid.getSelectedRecords()[0]["Equipment ID"];
+        updateEquipmentLabel(eqLabel);
         const keys = Object.keys(preprocessedData[eqLabel]);
         var partsList = [];
         keys.forEach(function(item) {
@@ -73,8 +98,9 @@ function App() {
     let partGrid = null;
     const partRowSelected = () => {
       if(partGrid) {
-        const eqLabel = equipmentGrid.getSelectedRecords()[0]["Equipment ID"];
+        const eqLabel = equipmentLabel;
         const partLabels = partGrid.getSelectedRecords();
+        updatePartLabels(partLabels);
         var keys = []
         partLabels.forEach(function(part) {
         const name = part["Part Number"];
@@ -94,7 +120,7 @@ function App() {
     const rcodeRowSelected = () => {
       if(rcodeGrid) {
         const selectedRcodeLabel = rcodeGrid.getSelectedRecords();
-        //console.log(selectedRcodeLabel)
+        updateCodeLabels(selectedRcodeLabel);
       }
     }
 
@@ -111,6 +137,36 @@ function App() {
     }
   
   function renderChart() {
+
+    // Load in Data
+    var xAxisData;
+    var yAxisData;
+    var graphCoordinates = [];
+    var parts = [];
+    partLabels.forEach(function(item) {
+      parts.push(item["Part Number"]);
+    })
+    var codes = []
+    codeLabels.forEach(function(item) {
+      codes.push(item["Code"]);
+    })
+
+    parts.forEach(function(part) {
+      xAxisData = [];
+      yAxisData = [];
+      Object.keys(preprocessedData[equipmentLabel][part]).forEach(function(code){
+        if(codes.includes(code)) {
+          preprocessedData[equipmentLabel][part][code].forEach(function(item){
+            yAxisData.push(item["Code"]);
+            xAxisData.push(new Date(item["Date"]));
+          })
+        }
+      })
+      graphCoordinates.push(generateCrd(xAxisData, yAxisData));
+      console.log(graphCoordinates);
+    })
+
+    console.log(graphCoordinates);
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
     const myChart = new Chart(ctx, {
@@ -118,26 +174,34 @@ function App() {
     data: {
         //labels: xAxisData,
         datasets: [{
-            label: graphLabel[0],
-            data: pdmGraphCoordinates[0],
+            label: parts[0],
+            data: graphCoordinates[0],
             backgroundColor: "#FF4136",
             borderColor: "#FF4136",
             fill: false,
             showLine: true,
             borderWidth: 1
-        },
-        {
-          label: graphLabel[1],
-          data: pdmGraphCoordinates[1],
-          backgroundColor: "#0074D9",
-          borderColor: "#0074D9",
-          fill: false,
-          showLine: true,
-          borderWidth: 1
-      }]
+        }
+      //   ,
+      //   {
+      //     label: graphLabel[1],
+      //     data: pdmGraphCoordinates[1],
+      //     backgroundColor: "#0074D9",
+      //     borderColor: "#0074D9",
+      //     fill: false,
+      //     showLine: true,
+      //     borderWidth: 1
+      // }
+    ]
     },
     options: {
         scales: {
+          xAxes: [{
+            type: 'time',
+            time: {
+              unit: 'month'
+            }
+          }],
             yAxes: [{
                 ticks: {
                     beginAtZero: true
@@ -172,7 +236,8 @@ function App() {
       const wb = XLSX.read(bstr, { type: rABS ? 'binary' : 'array', bookVBA : true });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
-      data = XLSX.utils.sheet_to_json(ws);
+      data = XLSX.utils.sheet_to_json(ws, {raw: false});
+
       cols = make_cols(ws['!ref'])
 
         // Preprocess data
@@ -184,10 +249,11 @@ function App() {
             delete jsonObject[i];
           }
           else {
-            if(typeof jsonObject[i].Code !== 'number') {
+            var d = new Date(jsonObject[i]["Date"]);
+            if(!jsonObject[i].Code.match(/^\d+$/)) {
               delete jsonObject[i];
             }
-            else if(typeof jsonObject[i]["Date"] !== 'number') {
+            else if(isNaN(d.getMonth())) {
               delete jsonObject[i];
             }
           }
@@ -205,34 +271,35 @@ function App() {
         updatepreprocessedDataState(jsonRegrouped);
         console.log(jsonRegrouped);
         
-        // Random data selection
-        var i;
-        for(i = 0; i < 2; i++) {
-          yAxisData = [];
-          xAxisData = [];
-        var keys = Object.keys(jsonRegroupedTest)
-        var randIndex = Math.floor(Math.random() * keys.length)
-        var randKey = keys[randIndex]
-        const randomGroup = jsonRegroupedTest[randKey]
-        var label = randKey + " => ";
-        keys = Object.keys(randomGroup)
-        randIndex = Math.floor(Math.random() * keys.length)
-        randKey = keys[randIndex]
-        const randomGroup2 = randomGroup[randKey];
-        label += randKey;
-        graphLabel.push(label);
 
-        randomGroup2.forEach(function(item) {
-          yAxisData.push(item["Code"]);
-          xAxisData.push(item["Date"]);
-        })
-        pdmGraphCoordinates.push(generateCrd(xAxisData, yAxisData));
-      }
+        // Random data selection
+      //   for(i = 0; i < 2; i++) {
+      //     yAxisData = [];
+      //     xAxisData = [];
+      //   var keys = Object.keys(jsonRegroupedTest)
+      //   var randIndex = Math.floor(Math.random() * keys.length)
+      //   var randKey = keys[randIndex]
+      //   const randomGroup = jsonRegroupedTest[randKey]
+      //   var label = randKey + " => ";
+      //   keys = Object.keys(randomGroup)
+      //   randIndex = Math.floor(Math.random() * keys.length)
+      //   randKey = keys[randIndex]
+      //   const randomGroup2 = randomGroup[randKey];
+      //   label += randKey;
+      //   graphLabel.push(label);
+        
+      //   randomGroup2.forEach(function(item) {
+      //     yAxisData.push(item["Code"]);
+      //     xAxisData.push(item["Date"]);
+      //   })
+        
+      //   pdmGraphCoordinates.push(generateCrd(xAxisData, yAxisData));
+      // }
       // End of random data selection
 
 
 
-        renderChart();
+     //   renderChart();
 
     };
     if (rABS) {
@@ -303,6 +370,8 @@ function App() {
           <Inject services={[Page, Filter]}/>
           </GridComponent>
           </div>
+
+          <DefaultButton onClick={renderChart}>Graph</DefaultButton>
 
         </div>
 
