@@ -158,28 +158,26 @@ function App() {
         if(codes.includes(code)) {
           preprocessedData[equipmentLabel][part][code].forEach(function(item){
             yAxisData.push(item["Code"]);
-            xAxisData.push(new Date(item["Date"]));
+            xAxisData.push(new Date(new Date(item["Date"]).toDateString()));
           })
         }
       })
       graphCoordinates.push(generateCrd(xAxisData, yAxisData));
-      console.log(graphCoordinates);
     })
 
-    console.log(graphCoordinates);
+
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
     const myChart = new Chart(ctx, {
     type: 'scatter',
     data: {
-        //labels: xAxisData,
         datasets: [{
-            label: parts[0],
+            label: "Part number: " + parts[0],
             data: graphCoordinates[0],
             backgroundColor: "#FF4136",
             borderColor: "#FF4136",
             fill: false,
-            showLine: true,
+            showLine: false,
             borderWidth: 1
         }
       //   ,
@@ -198,13 +196,26 @@ function App() {
         scales: {
           xAxes: [{
             type: 'time',
+            //distribution: 'series',
             time: {
-              unit: 'month'
+              unit: 'month',
+              //displayFormats: {quarter: 'll'}
             }
           }],
             yAxes: [{
+              gridLines: false,
                 ticks: {
-                    beginAtZero: true
+                  autoSkip: false,
+                  stepSize:1,
+                  callback: function(label, index, labels) {
+                    var result = false;
+                    graphCoordinates[0].forEach(function(item){
+                      if(item['y'] == label) {result = true;}
+                    })
+                    if (result) {
+                      return label
+                    }
+                  }
                 }
             }]
         }
