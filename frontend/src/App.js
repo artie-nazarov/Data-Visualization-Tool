@@ -7,7 +7,14 @@ import { make_cols } from './MakeColumns';
 import { SheetJSFT } from './types';
 import {GridComponent, ColumnDirective, ColumnsDirective,
   Page, Inject, Filter, gridObserver} from '@syncfusion/ej2-react-grids';
+import { endOfToday, format, set } from 'date-fns' 
 import testData from './json.json';
+import DateFnsUtils from '@date-io/date-fns'
+import {MuiPickersUtilsProvider,
+KeyboardTimePicker,
+KeyboardDatePicker} from '@material-ui/pickers'
+import { Grid } from '@material-ui/core';
+
  
 function App() {
 
@@ -50,19 +57,15 @@ function App() {
       setCodeLabels(eq => (codeLabels, e));
     }
 
-    // Graph data
-    var graphLabel = [];
-    var pdmGraphCoordinates = [];
 
-    // Graph states
-    const [graphLabels, setLabels] = useState([]);
-    function updateLabelState(e) {
-      setLabels(eq => (graphLabels, e));
+    // Date range states
+    const [minDate, setMinDate] = React.useState(null)
+    const handleMinDate = (date) => {
+      setMinDate(date)
     }
-
-    const [graphCoordinatesTest, setCoordinates] = useState([]);
-    function updateCoordinateState(e) {
-      setCoordinates(eq => (graphCoordinatesTest, e));
+    const [maxDate, setMaxDate] = React.useState(null)
+    const handleMaxDate = (date) => {
+      setMaxDate(date)
     }
     
     // Excel File properties
@@ -97,7 +100,7 @@ function App() {
     //2. Part Number Row selection
     let partGrid = null;
     const partRowSelected = () => {
-      if(partGrid) {
+      if(partGrid && partGrid.getSelectedRecords().length <= 3) {
         const eqLabel = equipmentLabel;
         const partLabels = partGrid.getSelectedRecords();
         updatePartLabels(partLabels);
@@ -113,6 +116,11 @@ function App() {
         })
         updateCodeState(codesList);
       }
+      else if(partGrid) {
+        partGrid.clearSelection()
+        updatePartLabels([])
+        alert("Only 3 Part selections are availavle. Please select your Parts again.")
+      }
     }
 
     //3. Repair Code Row selection
@@ -121,6 +129,43 @@ function App() {
       if(rcodeGrid) {
         const selectedRcodeLabel = rcodeGrid.getSelectedRecords();
         updateCodeLabels(selectedRcodeLabel);
+        
+        ////////
+      var parts = [];
+      var minDate = null;
+      var maxDate = null;
+      partLabels.forEach(function(item) {
+        parts.push(item["Part Number"]);
+      })
+      var codes = []
+      selectedRcodeLabel.forEach(function(item) {
+        codes.push(item["Code"]);
+      })
+
+      parts.forEach(function(part) {
+        Object.keys(preprocessedData[equipmentLabel][part]).forEach(function(code){
+          if(codes.includes(code)) {
+            preprocessedData[equipmentLabel][part][code].forEach(function(item){
+              const newDate = new Date(new Date(item["Date"]).toDateString());
+              if(minDate === null) {
+                minDate = newDate;
+              }
+              else if(+minDate > +newDate) {
+                minDate = newDate;
+              }
+              if(maxDate === null) {
+                maxDate = newDate;
+              }
+              else if(+maxDate < +newDate) {
+                maxDate = newDate;
+              }
+            })
+          }
+        })
+      })
+      setMinDate(minDate)
+      setMaxDate(maxDate)
+      /////////////
       }
     }
 
@@ -165,6 +210,7 @@ function App() {
       graphCoordinates.push(generateCrd(xAxisData, yAxisData));
     })
 
+    var codesUsed = []
 
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
@@ -180,16 +226,25 @@ function App() {
             showLine: false,
             borderWidth: 1
         }
-      //   ,
-      //   {
-      //     label: graphLabel[1],
-      //     data: pdmGraphCoordinates[1],
-      //     backgroundColor: "#0074D9",
-      //     borderColor: "#0074D9",
-      //     fill: false,
-      //     showLine: true,
-      //     borderWidth: 1
-      // }
+        ,
+        {
+          label: "Part number: " + parts[1],
+          data: graphCoordinates[1],
+          backgroundColor: "#0074D9",
+          borderColor: "#0074D9",
+          fill: false,
+          showLine: false,
+          borderWidth: 1
+      },
+      {
+        label: "Part number: " + parts[2],
+        data: graphCoordinates[2],
+        backgroundColor: "#228B22",
+        borderColor: "#228B22",
+        fill: false,
+        showLine: false,
+        borderWidth: 1
+    }
     ]
     },
     options: {
@@ -200,18 +255,44 @@ function App() {
             time: {
               unit: 'month',
               //displayFormats: {quarter: 'll'}
+            },
+            ticks: {
+              min: minDate,
+              max: maxDate
             }
           }],
             yAxes: [{
-              gridLines: false,
+                gridLines: false,
                 ticks: {
+                  min: 0,
                   autoSkip: false,
                   stepSize:1,
                   callback: function(label, index, labels) {
                     var result = false;
+                    if(graphCoordinates[0]){
                     graphCoordinates[0].forEach(function(item){
-                      if(item['y'] == label) {result = true;}
-                    })
+                      if(item['y'] == label && !codesUsed.includes(label)) {
+                        result = true; 
+                        codesUsed.push(label)}
+                    })}
+                    if (result) {
+                      return label
+                    }
+                    if(graphCoordinates[1]){
+                    graphCoordinates[1].forEach(function(item){
+                      if(item['y'] == label && !codesUsed.includes(label)) {
+                        result = true; 
+                        codesUsed.push(label)}
+                    })}
+                    if (result) {
+                      return label
+                    }
+                    if(graphCoordinates[2]){
+                    graphCoordinates[2].forEach(function(item){
+                      if(item['y'] == label && !codesUsed.includes(label)) {
+                        result = true; 
+                        codesUsed.push(label)}
+                    })}
                     if (result) {
                       return label
                     }
@@ -224,13 +305,13 @@ function App() {
   }
 
 
-  function download(content, fileName, contentType) {
-    var a = document.createElement("a");
-    var file = new Blob([content], {type: contentType});
-    a.href = URL.createObjectURL(file);
-    a.download = fileName;
-    a.click();
-}
+//   function download(content, fileName, contentType) {
+//     var a = document.createElement("a");
+//     var file = new Blob([content], {type: contentType});
+//     a.href = URL.createObjectURL(file);
+//     a.download = fileName;
+//     a.click();
+// }
  
  function handleChange(e) {
     const files = e.target.files;
@@ -371,6 +452,7 @@ function App() {
           pageSettings={{pageSize:10}}
           allowFiltering={true}
           rowSelected={rcodeRowSelected}
+          rowDeselected={rcodeRowSelected}
           ref={g => rcodeGrid = g}
           //selectionSettings={selectionOptions}
           >
@@ -382,8 +464,35 @@ function App() {
           </GridComponent>
           </div>
 
-          <DefaultButton onClick={renderChart}>Graph</DefaultButton>
-
+          <div id='graphButton'>
+            <MuiPickersUtilsProvider utils={DateFnsUtils}>
+              <Grid container justify='space-around'>
+                <KeyboardDatePicker
+                  //disableToolbar
+                  variant='dialog'
+                  format='MM/dd/yyyy'
+                  margin='normal'
+                  id='min-date'
+                  label='Start Date'
+                  value={minDate}
+                  onChange={handleMinDate}
+                  KeyboardButtonProps={{'arial-label': 'change date'}}
+                />
+                <KeyboardDatePicker
+                  //disableToolbar
+                  variant='dialog'
+                  format='MM/dd/yyyy'
+                  margin='normal'
+                  id='max-date'
+                  label='End Date'
+                  value={maxDate}
+                  onChange={handleMaxDate}
+                  KeyboardButtonProps={{'arial-label': 'change date'}}
+                />
+              </Grid>
+            </MuiPickersUtilsProvider>
+            <DefaultButton  onClick={renderChart}>Graph</DefaultButton>
+          </div>
         </div>
 
           <canvas id="chart"></canvas>

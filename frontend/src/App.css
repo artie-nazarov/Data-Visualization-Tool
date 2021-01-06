@@ -36,3 +36,11 @@
     width:1400px;
     height:1550px;
 }
+
+#graphButton {
+    margin-top: 10%;
+}
+
+#min-date {
+    width:100px;
+}
