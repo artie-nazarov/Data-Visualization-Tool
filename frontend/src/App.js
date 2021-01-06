@@ -57,6 +57,11 @@ function App() {
       setCodeLabels(eq => (codeLabels, e));
     }
 
+    // Graph Coordinates State
+    const [graphCoordinates, setGraphCoordinates] = useState([]);
+    function updateGraphCoordinates(e) {
+      setGraphCoordinates(eq => (graphCoordinates, e));
+    }
 
     // Date range states
     const [minDate, setMinDate] = React.useState(null)
@@ -130,7 +135,11 @@ function App() {
         const selectedRcodeLabel = rcodeGrid.getSelectedRecords();
         updateCodeLabels(selectedRcodeLabel);
         
-        ////////
+      // Load in data
+      ////////
+      var xAxisData;
+      var yAxisData;
+      var localGraphCoordinates = [];
       var parts = [];
       var minDate = null;
       var maxDate = null;
@@ -143,10 +152,15 @@ function App() {
       })
 
       parts.forEach(function(part) {
+        xAxisData = [];
+        yAxisData = [];
         Object.keys(preprocessedData[equipmentLabel][part]).forEach(function(code){
           if(codes.includes(code)) {
             preprocessedData[equipmentLabel][part][code].forEach(function(item){
               const newDate = new Date(new Date(item["Date"]).toDateString());
+              yAxisData.push(item["Code"]);
+              xAxisData.push(newDate);
+
               if(minDate === null) {
                 minDate = newDate;
               }
@@ -162,9 +176,11 @@ function App() {
             })
           }
         })
+        localGraphCoordinates.push(generateCrd(xAxisData, yAxisData));
       })
-      setMinDate(minDate)
-      setMaxDate(maxDate)
+      updateGraphCoordinates(localGraphCoordinates);
+      setMinDate(minDate);
+      setMaxDate(maxDate);
       /////////////
       }
     }
@@ -183,34 +199,15 @@ function App() {
   
   function renderChart() {
 
-    // Load in Data
-    var xAxisData;
-    var yAxisData;
-    var graphCoordinates = [];
     var parts = [];
     partLabels.forEach(function(item) {
       parts.push(item["Part Number"]);
     })
-    var codes = []
-    codeLabels.forEach(function(item) {
-      codes.push(item["Code"]);
-    })
-
-    parts.forEach(function(part) {
-      xAxisData = [];
-      yAxisData = [];
-      Object.keys(preprocessedData[equipmentLabel][part]).forEach(function(code){
-        if(codes.includes(code)) {
-          preprocessedData[equipmentLabel][part][code].forEach(function(item){
-            yAxisData.push(item["Code"]);
-            xAxisData.push(new Date(new Date(item["Date"]).toDateString()));
-          })
-        }
-      })
-      graphCoordinates.push(generateCrd(xAxisData, yAxisData));
-    })
 
     var codesUsed = []
+    const dateOffset = (24*60*60*1000) * 31;
+    var minD = new Date(minDate.getTime() - dateOffset);
+    var maxD = new Date(maxDate.getTime() + dateOffset);
 
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
@@ -257,8 +254,8 @@ function App() {
               //displayFormats: {quarter: 'll'}
             },
             ticks: {
-              min: minDate,
-              max: maxDate
+              min: minD,
+              max: maxD
             }
           }],
             yAxes: [{
