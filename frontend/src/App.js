@@ -63,6 +63,35 @@ function App() {
       setGraphCoordinates(eq => (graphCoordinates, e));
     }
 
+    // Time range based Data
+    const [selectedCodes, setSelectedCodes] = useState([]);
+    const [radarGraphLabels, setRadarLabels] = useState([]);
+    const [radarGraphData, setRadarData] = useState([]); 
+
+  function updateRangeData() {
+      var finalData = [];
+      if(minDate && maxDate) {
+        graphCoordinates.forEach(function(item) {
+          var codesDict = {}
+          selectedCodes.forEach(function(code) {
+            codesDict[code] = 0;
+          })
+          setRadarLabels(Object.keys(codesDict))
+          item.forEach(function(point) {
+            if(+point['x'] >= minDate && +point['x'] <= maxDate) {
+              codesDict[point['y']] += 1
+            }
+          })
+          var vals = []
+          for (var key in codesDict){
+            vals.push(codesDict[key])
+        }
+          finalData.push(vals)
+        })
+        setRadarData(finalData)
+      }      
+    }
+
     // Date range states
     const [minDate, setMinDate] = React.useState(null)
     const handleMinDate = (date) => {
@@ -124,7 +153,7 @@ function App() {
       else if(partGrid) {
         partGrid.clearSelection()
         updatePartLabels([])
-        alert("Only 3 Part selections are availavle. Please select your Parts again.")
+        alert("Only 3 Part selections are available. Please select your Parts again.")
       }
     }
 
@@ -150,6 +179,7 @@ function App() {
       selectedRcodeLabel.forEach(function(item) {
         codes.push(item["Code"]);
       })
+      setSelectedCodes(codes)
 
       parts.forEach(function(part) {
         xAxisData = [];
@@ -198,6 +228,30 @@ function App() {
     }
   
   function renderChart() {
+     //updateRangeData()
+     var radarData = [];
+     var radarLabels = {};
+     if(minDate && maxDate) {
+       graphCoordinates.forEach(function(item) {
+         var codesDict = {}
+         selectedCodes.forEach(function(code) {
+           codesDict[code] = 0;
+         })
+         setRadarLabels(Object.keys(codesDict))
+         radarLabels = Object.keys(codesDict)
+         item.forEach(function(point) {
+           if(+point['x'] >= minDate && +point['x'] <= maxDate) {
+             codesDict[point['y']] += 1
+           }
+         })
+         var vals = []
+         for (var key in codesDict){
+           vals.push(codesDict[key])
+       }
+       radarData.push(vals)
+       })
+       setRadarData(radarData)
+     }
 
     var parts = [];
     partLabels.forEach(function(item) {
@@ -222,8 +276,7 @@ function App() {
             fill: false,
             showLine: false,
             borderWidth: 1
-        }
-        ,
+        },
         {
           label: "Part number: " + parts[1],
           data: graphCoordinates[1],
@@ -299,6 +352,47 @@ function App() {
         }
     }
 });
+    const radarCtx = document.getElementById('radarChart').getContext('2d');
+    const radarChart = new Chart(radarCtx, {
+      type: 'radar',
+      data: {
+        labels: radarLabels,
+        datasets: [
+          {
+            label: "Part number: " + parts[0],
+            backgroundColor: 'rgba(00, 255, 00, 0.1)',
+            borderColor: '#FF4136',
+            borderWidth: 2,
+            data: radarData[0]
+          },
+          {
+            label: "Part number: " + parts[1],
+            backgroundColor: 'rgba(00, 255, 00, 0.1)',
+            borderColor: '#0074D9',
+            borderWidth: 2,
+            data: radarData[1]
+          },
+          {
+            label: "Part number: " + parts[2],
+            backgroundColor: 'rgba(00, 255, 255, 0.1)',
+            borderColor: '#228B22',
+            borderWidth: 2,
+            data: radarData[2]
+          }
+        ]
+      },
+      options: {
+        scale: {
+            angleLines: {
+                display: true
+            },
+            ticks: {
+              min: 0,
+              stepSize: 1
+            }
+        }
+    }
+    })
   }
 
 
@@ -357,38 +451,7 @@ function App() {
 
         //Update states
         updateEquipmentItemsState(eqStateObject);
-        updatepreprocessedDataState(jsonRegrouped);
-        console.log(jsonRegrouped);
-        
-
-        // Random data selection
-      //   for(i = 0; i < 2; i++) {
-      //     yAxisData = [];
-      //     xAxisData = [];
-      //   var keys = Object.keys(jsonRegroupedTest)
-      //   var randIndex = Math.floor(Math.random() * keys.length)
-      //   var randKey = keys[randIndex]
-      //   const randomGroup = jsonRegroupedTest[randKey]
-      //   var label = randKey + " => ";
-      //   keys = Object.keys(randomGroup)
-      //   randIndex = Math.floor(Math.random() * keys.length)
-      //   randKey = keys[randIndex]
-      //   const randomGroup2 = randomGroup[randKey];
-      //   label += randKey;
-      //   graphLabel.push(label);
-        
-      //   randomGroup2.forEach(function(item) {
-      //     yAxisData.push(item["Code"]);
-      //     xAxisData.push(item["Date"]);
-      //   })
-        
-      //   pdmGraphCoordinates.push(generateCrd(xAxisData, yAxisData));
-      // }
-      // End of random data selection
-
-
-
-     //   renderChart();
+        updatepreprocessedDataState(jsonRegrouped);        
 
     };
     if (rABS) {
@@ -493,6 +556,7 @@ function App() {
         </div>
 
           <canvas id="chart"></canvas>
+          <canvas id="radarChart"></canvas>
       </div>       
 
     )
