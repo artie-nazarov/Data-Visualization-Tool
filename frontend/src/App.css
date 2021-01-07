@@ -48,3 +48,8 @@
 #max-date {
     width:100px;
 }
+
+#secondaryGraphs {
+    display: flex;
+    max-width: 500px;
+}

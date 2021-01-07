@@ -248,6 +248,7 @@ function App() {
          for (var key in codesDict){
            vals.push(codesDict[key])
        }
+       vals = vals.map(value => value===0 ? NaN : value);
        radarData.push(vals)
        })
        setRadarData(radarData)
@@ -360,21 +361,22 @@ function App() {
         datasets: [
           {
             label: "Part number: " + parts[0],
-            backgroundColor: 'rgba(00, 255, 00, 0.1)',
+            backgroundColor: 'rgba(255, 00, 00, 0.1)',
             borderColor: '#FF4136',
             borderWidth: 2,
-            data: radarData[0]
+            data: radarData[0],
+            spanGaps: true
           },
           {
             label: "Part number: " + parts[1],
-            backgroundColor: 'rgba(00, 255, 00, 0.1)',
+            backgroundColor: 'rgba(00, 00, 255, 0.1)',
             borderColor: '#0074D9',
             borderWidth: 2,
             data: radarData[1]
           },
           {
             label: "Part number: " + parts[2],
-            backgroundColor: 'rgba(00, 255, 255, 0.1)',
+            backgroundColor: 'rgba(00, 255, 00, 0.1)',
             borderColor: '#228B22',
             borderWidth: 2,
             data: radarData[2]
@@ -554,9 +556,11 @@ function App() {
             <DefaultButton  onClick={renderChart}>Graph</DefaultButton>
           </div>
         </div>
-
-          <canvas id="chart"></canvas>
+        <canvas id="chart"></canvas>
+        <div id='secondaryGraphs'>
           <canvas id="radarChart"></canvas>
+          <canvas id="barGraph"></canvas>
+        </div>
       </div>       
 
     )
