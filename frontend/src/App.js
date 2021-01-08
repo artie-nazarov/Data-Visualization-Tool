@@ -215,6 +215,15 @@ function App() {
       }
     }
 
+    // Generate random color
+    function getRandomColor() {
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }    
 
     // Generate graph coordinates
     function generateCrd(x, y) {
@@ -228,12 +237,15 @@ function App() {
     }
   
   function renderChart() {
-     //updateRangeData()
+    var localGraphCoordinates = []
+
+    // Load in Radar Chart data
      var radarData = [];
      var radarLabels = {};
      if(minDate && maxDate) {
        graphCoordinates.forEach(function(item) {
          var codesDict = {}
+         var subGC = []
          selectedCodes.forEach(function(code) {
            codesDict[code] = 0;
          })
@@ -242,6 +254,7 @@ function App() {
          item.forEach(function(point) {
            if(+point['x'] >= minDate && +point['x'] <= maxDate) {
              codesDict[point['y']] += 1
+             subGC.push(point)
            }
          })
          var vals = []
@@ -250,20 +263,26 @@ function App() {
        }
        vals = vals.map(value => value===0 ? NaN : value);
        radarData.push(vals)
+       localGraphCoordinates.push(subGC)
        })
        setRadarData(radarData)
      }
+
+     console.log(localGraphCoordinates)
+     console.log(graphCoordinates)
 
     var parts = [];
     partLabels.forEach(function(item) {
       parts.push(item["Part Number"]);
     })
 
+    // Set Time range for main chart
     var codesUsed = []
     const dateOffset = (24*60*60*1000) * 31;
     var minD = new Date(minDate.getTime() - dateOffset);
     var maxD = new Date(maxDate.getTime() + dateOffset);
 
+    // Build graphs
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
     const myChart = new Chart(ctx, {
@@ -271,7 +290,7 @@ function App() {
     data: {
         datasets: [{
             label: "Part number: " + parts[0],
-            data: graphCoordinates[0],
+            data: localGraphCoordinates[0],
             backgroundColor: "#FF4136",
             borderColor: "#FF4136",
             fill: false,
@@ -280,7 +299,7 @@ function App() {
         },
         {
           label: "Part number: " + parts[1],
-          data: graphCoordinates[1],
+          data: localGraphCoordinates[1],
           backgroundColor: "#0074D9",
           borderColor: "#0074D9",
           fill: false,
@@ -289,7 +308,7 @@ function App() {
       },
       {
         label: "Part number: " + parts[2],
-        data: graphCoordinates[2],
+        data: localGraphCoordinates[2],
         backgroundColor: "#228B22",
         borderColor: "#228B22",
         fill: false,
@@ -320,8 +339,8 @@ function App() {
                   stepSize:1,
                   callback: function(label, index, labels) {
                     var result = false;
-                    if(graphCoordinates[0]){
-                    graphCoordinates[0].forEach(function(item){
+                    if(localGraphCoordinates[0]){
+                      localGraphCoordinates[0].forEach(function(item){
                       if(item['y'] == label && !codesUsed.includes(label)) {
                         result = true; 
                         codesUsed.push(label)}
@@ -329,8 +348,8 @@ function App() {
                     if (result) {
                       return label
                     }
-                    if(graphCoordinates[1]){
-                    graphCoordinates[1].forEach(function(item){
+                    if(localGraphCoordinates[1]){
+                      localGraphCoordinates[1].forEach(function(item){
                       if(item['y'] == label && !codesUsed.includes(label)) {
                         result = true; 
                         codesUsed.push(label)}
@@ -338,8 +357,8 @@ function App() {
                     if (result) {
                       return label
                     }
-                    if(graphCoordinates[2]){
-                    graphCoordinates[2].forEach(function(item){
+                    if(localGraphCoordinates[2]){
+                      localGraphCoordinates[2].forEach(function(item){
                       if(item['y'] == label && !codesUsed.includes(label)) {
                         result = true; 
                         codesUsed.push(label)}
@@ -395,6 +414,44 @@ function App() {
         }
     }
     })
+
+
+    const barCtx = document.getElementById('barGraph').getContext('2d');
+    var stackedBar = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        datasets: [
+          {
+            stack: "Part number: " + parts[0],
+            backgroundColor: 'rgba(255, 00, 00, 0.1)',
+            borderColor: '#FF4136',
+            borderWidth: 1,
+            data: graphCoordinates[0],
+           },
+          {
+            stack: "Part number: " + parts[1],
+            backgroundColor: 'rgba(00, 00, 255, 0.1)',
+            borderColor: '#0074D9',
+            borderWidth: 1,
+            data: graphCoordinates[1]
+          }
+        ]
+      },
+      options: {
+          scales: {
+              xAxes: [{
+                    type: 'time',
+                    time: {
+                      unit: 'month',
+                    },
+                  stacked: true
+                }],
+              yAxes: [{
+                  stacked: true
+              }]
+          }
+      }
+  });
   }
 
 
