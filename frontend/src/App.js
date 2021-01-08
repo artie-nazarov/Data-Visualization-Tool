@@ -237,11 +237,16 @@ function App() {
     }
   
   function renderChart() {
-    var localGraphCoordinates = []
 
-    // Load in Radar Chart data
+    // Load in Chart Data
+    var localGraphCoordinates = []
      var radarData = [];
      var radarLabels = {};
+     var barRawData = {}
+     var barEmptyData = {};
+     selectedCodes.forEach(function(code) {
+      barRawData[code] = {}
+    })
      if(minDate && maxDate) {
        graphCoordinates.forEach(function(item) {
          var codesDict = {}
@@ -255,6 +260,9 @@ function App() {
            if(+point['x'] >= minDate && +point['x'] <= maxDate) {
              codesDict[point['y']] += 1
              subGC.push(point)
+             if(point['x'] in barRawData[point['y']]) {barRawData[point['y']][point['x']] += 1}
+             else {barRawData[point['y']][point['x']] = 1}
+             barEmptyData[point['x']] = 0
            }
          })
          var vals = []
@@ -268,8 +276,38 @@ function App() {
        setRadarData(radarData)
      }
 
-     console.log(localGraphCoordinates)
-     console.log(graphCoordinates)
+     // Load Bar data
+      var barData = []
+      Object.keys(barRawData).forEach(function(code) {
+        var barD = []
+        var datesUsed = []
+        for (const [k, v] of Object.entries(barRawData[code])) {
+          const dateUsed = new Date(k)
+          barD.push({x: dateUsed, y: v})
+          datesUsed.push(k)
+        }
+        for (const [k, v] of Object.entries(barEmptyData)) {
+          const newDate = new Date(k)
+          if(!datesUsed.includes(k)){
+          barD.push({x: newDate, y: v})
+          datesUsed.push(k)
+          }
+        }
+        barD.sort(function(a, b) {
+          return +a['x'] - +b['x']
+        })
+        console.log(barD)
+        var codeBar = {}
+        codeBar['label'] = code
+        //codeBar['stack'] = 1
+        codeBar['backgroundColor'] = getRandomColor()
+        codeBar['borderColor'] = codeBar['backgroundColor']
+        codeBar['barThickness'] = 30
+        codeBar['data'] = barD
+        barData.push(codeBar)
+    })
+
+
 
     var parts = [];
     partLabels.forEach(function(item) {
@@ -282,11 +320,12 @@ function App() {
     var minD = new Date(minDate.getTime() - dateOffset);
     var maxD = new Date(maxDate.getTime() + dateOffset);
 
-    // Build graphs
+    // Main graph
     var Chart = require('chart.js');
     const ctx = document.getElementById('chart').getContext('2d');
     const myChart = new Chart(ctx, {
     type: 'scatter',
+
     data: {
         datasets: [{
             label: "Part number: " + parts[0],
@@ -295,7 +334,9 @@ function App() {
             borderColor: "#FF4136",
             fill: false,
             showLine: false,
-            borderWidth: 1
+            borderWidth: 1,
+            pointRadius: 5,
+            pointHoverRadius: 5,
         },
         {
           label: "Part number: " + parts[1],
@@ -304,7 +345,9 @@ function App() {
           borderColor: "#0074D9",
           fill: false,
           showLine: false,
-          borderWidth: 1
+          borderWidth: 1,
+          pointRadius: 5,
+          pointHoverRadius: 5,
       },
       {
         label: "Part number: " + parts[2],
@@ -313,7 +356,9 @@ function App() {
         borderColor: "#228B22",
         fill: false,
         showLine: false,
-        borderWidth: 1
+        borderWidth: 1,
+        pointRadius: 5,
+        pointHoverRadius: 5,
     }
     ]
     },
@@ -372,6 +417,8 @@ function App() {
         }
     }
 });
+
+    // Radar Graph
     const radarCtx = document.getElementById('radarChart').getContext('2d');
     const radarChart = new Chart(radarCtx, {
       type: 'radar',
@@ -391,14 +438,16 @@ function App() {
             backgroundColor: 'rgba(00, 00, 255, 0.1)',
             borderColor: '#0074D9',
             borderWidth: 2,
-            data: radarData[1]
+            data: radarData[1],
+            spanGaps: true
           },
           {
             label: "Part number: " + parts[2],
             backgroundColor: 'rgba(00, 255, 00, 0.1)',
             borderColor: '#228B22',
             borderWidth: 2,
-            data: radarData[2]
+            data: radarData[2],
+            spanGaps: true
           }
         ]
       },
@@ -415,38 +464,27 @@ function App() {
     }
     })
 
-
+    // Bar Graph
     const barCtx = document.getElementById('barGraph').getContext('2d');
     var stackedBar = new Chart(barCtx, {
       type: 'bar',
       data: {
-        datasets: [
-          {
-            stack: "Part number: " + parts[0],
-            backgroundColor: 'rgba(255, 00, 00, 0.1)',
-            borderColor: '#FF4136',
-            borderWidth: 1,
-            data: graphCoordinates[0],
-           },
-          {
-            stack: "Part number: " + parts[1],
-            backgroundColor: 'rgba(00, 00, 255, 0.1)',
-            borderColor: '#0074D9',
-            borderWidth: 1,
-            data: graphCoordinates[1]
-          }
-        ]
+        datasets: barData
       },
       options: {
           scales: {
               xAxes: [{
+                ticks: {min: minD,
+                max: maxD},
                     type: 'time',
+                     distribution: 'series',
                     time: {
-                      unit: 'month',
+                      unit: 'month'
                     },
                   stacked: true
                 }],
               yAxes: [{
+                  ticks: {stepSize: 1},
                   stacked: true
               }]
           }

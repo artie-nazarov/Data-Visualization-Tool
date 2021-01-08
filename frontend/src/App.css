@@ -50,6 +50,7 @@
 }
 
 #secondaryGraphs {
+    margin-top: 2%;
     display: flex;
-    max-width: 500px;
+    max-width: 50%;
 }
