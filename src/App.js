@@ -110,7 +110,8 @@ function App() {
      const groupBy = require('json-groupby');
 
      const selectionOptions = {
-      type: 'Multiple'
+      type: 'Multiple',
+      persistSelection: true
     };
 
     // TABLE FORMATING
@@ -549,7 +550,8 @@ function App() {
 
         //Update states
         updateEquipmentItemsState(eqStateObject);
-        updatepreprocessedDataState(jsonRegrouped);        
+        updatepreprocessedDataState(jsonRegrouped);
+        console.log(jsonRegrouped)   
 
     };
     if (rABS) {
@@ -578,9 +580,11 @@ function App() {
               allowFiltering={true}
               rowSelected={equipmentRowSelected}
               ref={g => equipmentGrid = g}
+              selectionSettings={selectionOptions}
               >
               <ColumnsDirective>
-            <ColumnDirective field='Equipment ID' headerText='Equipment List' textAlign='Center'/>
+              <ColumnDirective type='checkbox' width='50'/>
+            <ColumnDirective field='Equipment ID' headerText='Equipment List' textAlign='Center' isPrimaryKey={true}/>
             </ColumnsDirective>
             <Inject services={[Page, Filter]}/>
             </GridComponent>
@@ -594,11 +598,12 @@ function App() {
           rowSelected={partRowSelected}
           rowDeselected={partRowSelected}
           ref={g => partGrid = g}
-          //selectionSettings={selectionOptions}
+          selectionSettings={selectionOptions}
           >
+            <e-grid-selectionSettings persistSelection="true"></e-grid-selectionSettings>
             <ColumnsDirective>
             <ColumnDirective type='checkbox' width='50'/>
-          <ColumnDirective field='Part Number' headerText='Part Number' textAlign='Center'/>
+          <ColumnDirective field='Part Number' headerText='Part Number' textAlign='Center' isPrimaryKey={true}/>
           </ColumnsDirective>
           <Inject services={[Page, Filter]}/>
           </GridComponent>
@@ -612,11 +617,11 @@ function App() {
           rowSelected={rcodeRowSelected}
           rowDeselected={rcodeRowSelected}
           ref={g => rcodeGrid = g}
-          //selectionSettings={selectionOptions}
+          selectionSettings={selectionOptions}
           >
             <ColumnsDirective>
             <ColumnDirective type='checkbox' width='50'/>
-          <ColumnDirective field='Code' headerText='Repair Code' textAlign='Center'/>
+          <ColumnDirective field='Code' headerText='Repair Code' textAlign='Center' isPrimaryKey={true}/>
           </ColumnsDirective>
           <Inject services={[Page, Filter]}/>
           </GridComponent>
